@@ -8,9 +8,11 @@ import constant from './common/constants'
 
 Vue.use(baseComponent)
 Vue.use(businessComponent)
+// 还有directives mixins filters
 Vue.config.productionTip = false
 
 Vue.prototype.$constant = constant
+// 还有utils
 new Vue({
   router,
   store,
