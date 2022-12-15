@@ -4,11 +4,13 @@ import router from './router'
 import store from './store'
 import baseComponent from './common/components/basic'
 import businessComponent from './common/components/business'
+import constant from './common/constants'
 
 Vue.use(baseComponent)
 Vue.use(businessComponent)
 Vue.config.productionTip = false
 
+Vue.prototype.$constant = constant
 new Vue({
   router,
   store,
