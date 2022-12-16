@@ -14,6 +14,9 @@ export default {
   name: 'Home',
   components: {
     HelloWorld
+  },
+  mounted () {
+    this.$Message.info(`当前使用的常量模块是 ${this.$constant.moduleA.moduleName}`)
   }
 }
 </script>

@@ -1,3 +1,13 @@
 <template>
-  <div class="s-input">s-input</div>
+  <div class="s-input">basic-component : {{ componentName }}</div>
 </template>
+
+<script>
+export default {
+  data () {
+    return {
+      componentName: 's-input'
+    }
+  }
+}
+</script>
