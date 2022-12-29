@@ -6,6 +6,7 @@ const traverse = require('@babel/traverse').default
 const generator = require('@babel/generator').default
 const t = require('@babel/types')
 const compiler = require('vue-template-compiler')
+const glob = require('glob')
 
 /**
  *
@@ -44,50 +45,6 @@ const allComponentList = Object.keys(allComponentMaps)
 
 console.log(`allComponentList is ${allComponentList}`)
 
-// 目标文件
-const targetFile = path.resolve(__dirname, './App.vue')
-
-// 得到文件内容
-const content = fs.readFileSync(targetFile).toString()
-
-/**
- *
- * @param {t.Node} node
- * @param {Set} result
- */
-function parseHTML (node, result = new Set()) {
-  if (allComponentList.some((item) => item === node.tag)) {
-    result.add(node.tag)
-  } else {
-    (node.children || []).forEach((element) => {
-      parseHTML(element, result)
-    })
-  }
-  return result
-}
-
-const result = parseHTML(compiler.compile(content).ast)
-console.log('模板中使用的业务组件有以下几个')
-console.log(result)
-
-// 提取js的内容
-const scriptContent = /<script>([\s\S]+?)<\/script>/.exec(content)[1]
-
-// 得到ast
-const scriptAst = parser.parse(scriptContent, {
-  sourceType: 'module' // 此处按需引入你需要引入的plugin等
-})
-
-// 遍历ast的时候如果没有用某个组件就把他删掉
-const tempRes = new Set(result)
-traverse(scriptAst, {
-  ImportDefaultSpecifier (path, state) {
-    const node = path.node
-    if (tempRes.has(node.local.name)) {
-      result.delete(node.local.name)
-    }
-  }
-})
 /**
  * 字符串横杠转驼峰
  * @param {string} str
@@ -110,61 +67,118 @@ function camelToStr (str) {
     return letter.toUpperCase()
   })
 }
-// 将用到的业务组件，并且没有引入的 引入一下
-traverse(scriptAst, {
-  Program (path, state) {
-    const node = path.node
-    const body = node.body
-    tempRes.forEach((componentName) => {
-      const importDefaultSpecifier = t.importDefaultSpecifier(
-        t.identifier(camelToStr(componentName))
-      )
-      const importDeclaration = t.importDeclaration(
-        [importDefaultSpecifier],
-        t.StringLiteral(allComponentMaps[componentName])
-      )
-      body.unshift(importDeclaration)
+
+/**
+ *
+ * @param {t.Node} node
+ * @param {Set} result
+ */
+function parseHTML (node, result = new Set()) {
+  if (allComponentList.some((item) => item === node.tag)) {
+    result.add(node.tag)
+  } else {
+    (node.children || []).forEach((element) => {
+      parseHTML(element, result)
     })
   }
-})
-// 自动注册组件
-traverse(scriptAst, {
-  ExportDefaultDeclaration (path, state) {
-    const allProperties = path.node.declaration.properties
-    // 判断是否有components
-    const hasComponents = allProperties
-      .filter((item) => item.type === 'ObjectProperty')
-      .filter((item) => item.key.name === 'components')
+  return result
+}
 
-    console.log(hasComponents)
-
-    let components = null
-    if (!hasComponents.length) {
-      components = t.objectProperty(
-        t.identifier('components'),
-        t.objectExpression([])
-      )
-      allProperties.push(components)
-    } else {
-      components = hasComponents[0]
+/**
+ *
+ * @param {t.parseScriptAst} scriptAst
+ * @param {Set} scriptAst
+ */
+function parseScriptAst (scriptAst, tempRes) {
+  traverse(scriptAst, {
+    ImportDefaultSpecifier (path, state) {
+      const node = path.node
+      if (tempRes.has(node.local.name)) {
+        result.delete(node.local.name)
+      }
     }
-    components.value.properties = components.value.properties || []
-    tempRes.forEach((item) => {
-      const component = t.objectProperty(
-        t.identifier(camelToStr(item)),
-        t.identifier(camelToStr(item))
-      )
-      components.value.properties.push(component)
-    })
-  }
-})
+  })
+  // 将用到的业务组件，并且没有引入的 引入一下
+  traverse(scriptAst, {
+    Program (path, state) {
+      const node = path.node
+      const body = node.body
+      tempRes.forEach((componentName) => {
+        const importDefaultSpecifier = t.importDefaultSpecifier(
+          t.identifier(camelToStr(componentName))
+        )
+        const importDeclaration = t.importDeclaration(
+          [importDefaultSpecifier],
+          t.StringLiteral(allComponentMaps[componentName])
+        )
+        body.unshift(importDeclaration)
+      })
+    }
+  })
+  // 自动注册组件
+  traverse(scriptAst, {
+    ExportDefaultDeclaration (path, state) {
+      const allProperties = path.node.declaration.properties
+      // 判断是否有components
+      const hasComponents = allProperties
+        .filter((item) => item.type === 'ObjectProperty')
+        .filter((item) => item.key.name === 'components')
 
-const sc = generator(scriptAst.program)
-// 先随便生成到一个地方做测试
-fs.writeFileSync(
-  './a.vue',
-  content.replace(
-    /<script>([\s\S]+?)<\/script>/,
+      console.log(hasComponents)
+
+      let components = null
+      if (!hasComponents.length) {
+        components = t.objectProperty(
+          t.identifier('components'),
+          t.objectExpression([])
+        )
+        allProperties.push(components)
+      } else {
+        components = hasComponents[0]
+      }
+      components.value.properties = components.value.properties || []
+      tempRes.forEach((item) => {
+        const component = t.objectProperty(
+          t.identifier(camelToStr(item)),
+          t.identifier(camelToStr(item))
+        )
+        components.value.properties.push(component)
+      })
+    }
+  })
+}
+
+// 目标文件
+function main (targetFile) {
+  console.log(`当前文件名是${targetFile}`)
+  // 得到文件内容
+  const content = fs.readFileSync(targetFile).toString()
+  const result = parseHTML(compiler.compile(content).ast)
+
+  // 提取js的内容
+  const scriptContent = /<script>([\s\S]+?)<\/script>/.exec(content)[1]
+
+  // 得到ast
+  const scriptAst = parser.parse(scriptContent, {
+    sourceType: 'module' // 此处按需引入你需要引入的plugin等
+  })
+
+  // 遍历ast的时候如果没有用某个组件就把他删掉
+  const tempRes = new Set(result)
+
+  parseScriptAst(scriptAst, tempRes)
+
+  const sc = generator(scriptAst.program)
+  // 先随便生成到一个地方做测试
+  fs.writeFileSync(
+    targetFile,
+    content.replace(
+      /<script>([\s\S]+?)<\/script>/,
     `<script>\n${sc.code}\n</script>`
+    )
   )
-)
+}
+
+const files = glob.sync(`${resolve('src')}/**/**.vue`, {})
+console.log(files)
+files.forEach(main)
