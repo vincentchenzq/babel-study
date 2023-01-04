@@ -97,7 +97,12 @@ function parseScriptAst (scriptAst, tempRes) {
         result.delete(node.local.name)
       }
     },
-    ...require('@vue/babel-plugin-transform-vue-jsx')({ types: t }).visitor
+    JSXIdentifier (path, state) {
+      // TODO: 这里需要判断是不是驼峰的命名 这里先不判断，不是重点
+      tempRes.add(path.node.name)
+      // 这里把jsx的名字当成横杠
+      path.node.name = camelToStr(path.node.name)
+    }
   })
   // 将用到的业务组件，并且没有引入的 引入一下
   traverse(scriptAst, {
@@ -124,8 +129,6 @@ function parseScriptAst (scriptAst, tempRes) {
       const hasComponents = allProperties
         .filter((item) => item.type === 'ObjectProperty')
         .filter((item) => item.key.name === 'components')
-
-      console.log(hasComponents)
 
       let components = null
       if (!hasComponents.length) {
