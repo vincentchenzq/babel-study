@@ -5,13 +5,15 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint --fix"
   },
   "dependencies": {
     "@babel/generator": "^7.20.5",
     "@babel/parser": "^7.20.5",
     "@babel/traverse": "^7.20.5",
     "@babel/types": "^7.20.5",
+    "@vue/babel-plugin-transform-vue-jsx": "^1.4.0",
+    "@vue/babel-preset-jsx": "^1.4.0",
     "core-js": "^3.6.5",
     "glob": "^8.0.3",
     "view-design": "^4.7.0",

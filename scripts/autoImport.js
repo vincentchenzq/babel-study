@@ -96,7 +96,8 @@ function parseScriptAst (scriptAst, tempRes) {
       if (tempRes.has(node.local.name)) {
         result.delete(node.local.name)
       }
-    }
+    },
+    ...require('@vue/babel-plugin-transform-vue-jsx')({ types: t }).visitor
   })
   // 将用到的业务组件，并且没有引入的 引入一下
   traverse(scriptAst, {
@@ -147,20 +148,21 @@ function parseScriptAst (scriptAst, tempRes) {
     }
   })
 }
-
+var result = new Set()
 // 目标文件
 function main (targetFile) {
   console.log(`当前文件名是${targetFile}`)
   // 得到文件内容
   const content = fs.readFileSync(targetFile).toString()
-  const result = parseHTML(compiler.compile(content).ast)
+  result = parseHTML(compiler.compile(content).ast)
 
   // 提取js的内容
   const scriptContent = /<script>([\s\S]+?)<\/script>/.exec(content)[1]
 
   // 得到ast
   const scriptAst = parser.parse(scriptContent, {
-    sourceType: 'module' // 此处按需引入你需要引入的plugin等
+    sourceType: 'module', // 此处按需引入你需要引入的plugin等
+    plugins: ['jsx']
   })
 
   // 遍历ast的时候如果没有用某个组件就把他删掉
@@ -174,7 +176,7 @@ function main (targetFile) {
     targetFile,
     content.replace(
       /<script>([\s\S]+?)<\/script>/,
-    `<script>\n${sc.code}\n</script>`
+      `<script>\n${sc.code}\n</script>`
     )
   )
 }
