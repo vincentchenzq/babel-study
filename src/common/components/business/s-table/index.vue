@@ -10,11 +10,17 @@
 </template>
 
 <script>
+import sFile from '@/common/components/basic/s-file'
+import sInput from '@/common/components/basic/s-input'
 export default {
   data () {
     return {
       componentName: 's-table'
     }
+  },
+  components: {
+    sInput: sInput,
+    sFile: sFile
   }
 }
 </script>

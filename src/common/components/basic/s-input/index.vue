@@ -8,6 +8,7 @@ export default {
     return {
       componentName: 's-input'
     }
-  }
+  },
+  components: {}
 }
 </script>

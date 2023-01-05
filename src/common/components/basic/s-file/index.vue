@@ -8,6 +8,7 @@ export default {
     return {
       componentName: 's-file'
     }
-  }
+  },
+  components: {}
 }
 </script>

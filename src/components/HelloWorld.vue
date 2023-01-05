@@ -12,10 +12,14 @@
 </template>
 
 <script>
+import sTable from '@/common/components/business/s-table'
 export default {
   name: 'HelloWorld',
   props: {
     msg: String
+  },
+  components: {
+    sTable: sTable
   }
 }
 </script>
